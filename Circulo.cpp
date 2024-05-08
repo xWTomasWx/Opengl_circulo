@@ -2,6 +2,8 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cmath>
+#include <random>
+#include <time.h>
 
 const char* vertexShaderCodigo = 
     "#version 330 core\n"
@@ -15,11 +17,14 @@ const char* vertexShaderCodigo =
 const char* fragmentShaderCodigo = 
     "#version 330 core\n"
     "out vec4 FragColor;\n"
+    "uniform float colorR;"
+    "uniform float colorG;"
+    "uniform float colorB;"
     "void main()\n"
     "{\n"
-    "   FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);\n"
+    "   FragColor = vec4(colorR, colorG, colorB, 1.0f);\n"
     "}\n\0";
-
+//Clase que se encarga de inicializar los shaders
 class Shader {
 private:
     unsigned int id;
@@ -50,7 +55,7 @@ public:
         return id;
     }
 };
-
+//Clase que se encarga de la creacion de una ventana
 class Ventana {
 private:
     GLFWwindow* ventana;
@@ -81,17 +86,22 @@ public:
         return ventana;
     }
 };
-
+//Clase que se encarga de generar el dibujo, el circulo
 class Dibujo{
 private:
     unsigned int VAO, VBO;
     Shader shader;
     const int n = 100;
     float escala, aumento;
+    //Un arreglo para manejar los colores
+    //0 = rojo, 1 = verde, 2 = azul
+    float color[3];
 public:
-    Dibujo(const char* vertexShaderCodigo, const char* fragmentShaderCodigo) : shader(vertexShaderCodigo, fragmentShaderCodigo){
-        escala = 0.5f;
-        aumento = 0.002f;
+    Dibujo(const char* vertexShaderCodigo, const char* fragmentShaderCodigo) : shader(vertexShaderCodigo, fragmentShaderCodigo),
+            escala(1.0f), aumento(0.002f){
+        for(int i = 0; i < 3; i++){
+            color[i] = (float)(rand()) / (float)(RAND_MAX);
+        }
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
 
@@ -133,15 +143,35 @@ public:
             escala = 1.0f;
         }
     }
+    void cambiarColor(float r, float g, float b){
+        color[0] = r;
+        color[1] = g;
+        color[2] = b;
+        for(int i = 0; i<3; i++){
+            if(color[i] > 1.0f){
+                color[i] = 1.0f;
+            }
+            if(color[i] < 0.0f){
+                color[i] = 0.0f;
+            }
+        }
+    }
+    float getColor(int num){
+        return color[num];
+    }
     void dibujar(){
         glUseProgram(shader.getId());
         glUniform1f(glGetUniformLocation(shader.getId(), "escala"), escala);
+        glUniform1f(glGetUniformLocation(shader.getId(), "colorR"), color[0]);
+        glUniform1f(glGetUniformLocation(shader.getId(), "colorG"), color[1]);
+        glUniform1f(glGetUniformLocation(shader.getId(), "colorB"), color[2]);
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLE_FAN, 0, n);
     }
 };
-
+//Aqui se procesan las entradas de teclado
 void processInput(GLFWwindow* ventana, Dibujo& d){
+    float cambio = 0.01f;
     if(glfwGetKey(ventana, GLFW_KEY_ESCAPE) == GLFW_PRESS){
         glfwSetWindowShouldClose(ventana, true);
     }
@@ -152,29 +182,27 @@ void processInput(GLFWwindow* ventana, Dibujo& d){
         d.cambiarEscala(1);
     }
     if(glfwGetKey(ventana, GLFW_KEY_1) == GLFW_PRESS){
-        d.cambiarEscala(1);
+        d.cambiarColor(d.getColor(0) + cambio, d.getColor(1), d.getColor(2));
     }
     if(glfwGetKey(ventana, GLFW_KEY_2) == GLFW_PRESS){
-        d.cambiarEscala(1);
+        d.cambiarColor(d.getColor(0) - cambio, d.getColor(1), d.getColor(2));
     }
     if(glfwGetKey(ventana, GLFW_KEY_3) == GLFW_PRESS){
-        d.cambiarEscala(1);
+        d.cambiarColor(d.getColor(0), d.getColor(1) + cambio, d.getColor(2));
     }
     if(glfwGetKey(ventana, GLFW_KEY_4) == GLFW_PRESS){
-        d.cambiarEscala(1);
+        d.cambiarColor(d.getColor(0), d.getColor(1) - cambio, d.getColor(2));
     }
     if(glfwGetKey(ventana, GLFW_KEY_5) == GLFW_PRESS){
-        d.cambiarEscala(1);
+        d.cambiarColor(d.getColor(0), d.getColor(1), d.getColor(2) + cambio);
     }
     if(glfwGetKey(ventana, GLFW_KEY_6) == GLFW_PRESS){
-        d.cambiarEscala(1);
+        d.cambiarColor(d.getColor(0), d.getColor(1), d.getColor(2) - cambio);
     }
 }
 
-
-
-
 int main(){
+    srand(time(0));
     Ventana v(800, 800, "OpenGL Circle");
 
     // Make the window's context current before loading GLAD
